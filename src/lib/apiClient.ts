@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+// Default API base: prefer VITE_API_BASE_URL (set in Vercel). If missing, default to Render backend.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://backendsaas-htlv.onrender.com' || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
 
 export interface ApiResponse<T = any> {
   data?: T;
