@@ -1,0 +1,364 @@
+{
+  service: 'realtech-api',
+  name: 'PrismaClientInitializationError',
+  clientVersion: '5.22.0',
+  errorCode: 'P1012',
+  level: 'error',
+  message: '❌ Database connection failed: \x1B[1;91merror\x1B[0m: \x1B[1mEnvironment variable not found: DATABASE_URL.\x1B[0m\n' +
+    '  \x1B[1;94m-->\x1B[0m  \x1B[4mschema.prisma:7\x1B[0m\n' +
+    '\x1B[1;94m   | \x1B[0m\n' +
+    '\x1B[1;94m 6 | \x1B[0m  provider = "postgresql"\n' +
+    '\x1B[1;94m 7 | \x1B[0m  url      = \x1B[1;91menv("DATABASE_URL")\x1B[0m\n' +
+    '\x1B[1;94m   | \x1B[0m\n' +
+    '\n' +
+    'Validation Error Count: 1',
+  stack: 'PrismaClientInitializationError: \x1B[1;91merror\x1B[0m: \x1B[1mEnvironment variable not found: DATABASE_URL.\x1B[0m\n' +
+    '  \x1B[1;94m-->\x1B[0m  \x1B[4mschema.prisma:7\x1B[0m\n' +
+    '\x1B[1;94m   | \x1B[0m\n' +
+    '\x1B[1;94m 6 | \x1B[0m  provider = "postgresql"\n' +
+    '\x1B[1;94m 7 | \x1B[0m  url      = \x1B[1;91menv("DATABASE_URL")\x1B[0m\n' +
+    '\x1B[1;94m   | \x1B[0m\n' +
+    '\n' +
+    'Validation Error Count: 1\n' +
+    '    at t (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/@prisma/client/runtime/library.js:112:2488)\n' +
+    '    at async connectDatabase (file:///home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/src/config/database.js:19:5)\n' +
+    '    at async startServer (file:///home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/src/app.js:77:5)',
+  timestamp: '2025-10-01 11:32:01'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '🚀 RealTech Holding API running on port 3000',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '📊 Dashboard: http://localhost:3000/api/health',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '🔐 Environment: development',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '📋 Available endpoints:',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '  - POST /api/auth/login',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '  - GET  /api/auth/profile',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '  - GET  /api/users',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '  - GET  /api/clients',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '  - GET  /api/products',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '  - GET  /api/services',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '  - GET  /api/tasks',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '  - GET  /api/commandes',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  message: '  - GET  /api/dashboard/stats',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:32:43'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'GET /api/dashboard/stats',
+  timestamp: '2025-10-01 11:32:55'
+}
+{
+  service: 'realtech-api',
+  error: 'Token invalide',
+  stack: 'Error: Token invalide\n' +
+    '    at authenticate (file:///home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/src/middlewares/auth.js:19:19)\n' +
+    '    at Layer.handle [as handle_request] (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at trim_prefix (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:328:13)\n' +
+    '    at /home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:286:9\n' +
+    '    at Function.process_params (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:346:12)\n' +
+    '    at next (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:280:10)\n' +
+    '    at Function.handle (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:175:3)\n' +
+    '    at router (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:47:12)\n' +
+    '    at Layer.handle [as handle_request] (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at trim_prefix (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:328:13)',
+  url: '/api/dashboard/stats',
+  method: 'GET',
+  ip: '::ffff:127.0.0.1',
+  level: 'error',
+  message: 'Error caught by global handler:',
+  timestamp: '2025-10-01 11:32:55'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'POST /api/auth/login',
+  timestamp: '2025-10-01 11:33:17'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'POST /api/auth/login',
+  timestamp: '2025-10-01 11:33:21'
+}
+{
+  message: 'SIGINT signal received: closing HTTP server',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:35:39'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '🚀 RealTech Holding API running on port 3000',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '📊 Dashboard: http://localhost:3000/api/health',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '🔐 Environment: development',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '📋 Available endpoints:',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '  - POST /api/auth/login',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '  - GET  /api/auth/profile',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '  - GET  /api/users',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '  - GET  /api/clients',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '  - GET  /api/products',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '  - GET  /api/services',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '  - GET  /api/tasks',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '  - GET  /api/commandes',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  message: '  - GET  /api/dashboard/stats',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:36:50'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'POST /api/auth/login',
+  timestamp: '2025-10-01 11:37:03'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'POST /api/auth/login',
+  timestamp: '2025-10-01 11:37:08'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'GET /api/dashboard/stats',
+  timestamp: '2025-10-01 11:37:12'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'GET /api/commandes',
+  timestamp: '2025-10-01 11:37:13'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'GET /api/taches',
+  timestamp: '2025-10-01 11:37:13'
+}
+{
+  service: 'realtech-api',
+  error: 'Route /api/taches non trouvée',
+  stack: 'Error: Route /api/taches non trouvée\n' +
+    '    at notFound (file:///home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/src/middlewares/errorHandler.js:94:17)\n' +
+    '    at Layer.handle [as handle_request] (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at trim_prefix (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:328:13)\n' +
+    '    at /home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:286:9\n' +
+    '    at Function.process_params (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:346:12)\n' +
+    '    at next (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:280:10)\n' +
+    '    at /home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:646:15\n' +
+    '    at next (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:265:14)\n' +
+    '    at authenticate (file:///home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/src/middlewares/auth.js:39:12)\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)',
+  url: '/api/taches',
+  method: 'GET',
+  ip: '::ffff:127.0.0.1',
+  level: 'error',
+  message: 'Error caught by global handler:',
+  timestamp: '2025-10-01 11:37:13'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'GET /api/dashboard/stats',
+  timestamp: '2025-10-01 11:37:17'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'GET /api/commandes',
+  timestamp: '2025-10-01 11:37:18'
+}
+{
+  service: 'realtech-api',
+  ip: '::ffff:127.0.0.1',
+  userAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  level: 'info',
+  message: 'GET /api/taches',
+  timestamp: '2025-10-01 11:37:18'
+}
+{
+  service: 'realtech-api',
+  error: 'Route /api/taches non trouvée',
+  stack: 'Error: Route /api/taches non trouvée\n' +
+    '    at notFound (file:///home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/src/middlewares/errorHandler.js:94:17)\n' +
+    '    at Layer.handle [as handle_request] (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at trim_prefix (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:328:13)\n' +
+    '    at /home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:286:9\n' +
+    '    at Function.process_params (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:346:12)\n' +
+    '    at next (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:280:10)\n' +
+    '    at /home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:646:15\n' +
+    '    at next (/home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/node_modules/express/lib/router/index.js:265:14)\n' +
+    '    at authenticate (file:///home/dianka/Documents/SaaS/Gestion_stock/realtech-backend/src/middlewares/auth.js:39:12)\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)',
+  url: '/api/taches',
+  method: 'GET',
+  ip: '::ffff:127.0.0.1',
+  level: 'error',
+  message: 'Error caught by global handler:',
+  timestamp: '2025-10-01 11:37:18'
+}
+{
+  message: 'SIGINT signal received: closing HTTP server',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-01 11:37:35'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  service: 'realtech-api',
+  timestamp: '2025-10-04 23:28:19'
+}
