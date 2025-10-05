@@ -40,8 +40,8 @@ export const config = {
     if (base) return isAbsolute(base) ? base : resolve(process.cwd(), base);
     return resolve((process.env.UPLOAD_PATH && isAbsolute(process.env.UPLOAD_PATH)) ? process.env.UPLOAD_PATH : resolve(__dirname, '..', '..', 'uploads'), 'Reçus');
   })(),
-  // Frontend URL used for CORS in production
-  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
+  // Frontend URL used for CORS in production (default to deployed Vercel site)
+  FRONTEND_URL: process.env.FRONTEND_URL || 'https://smart-ges.vercel.app',
   
   // Email
   SMTP_HOST: process.env.SMTP_HOST || '',
