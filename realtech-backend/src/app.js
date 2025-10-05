@@ -30,7 +30,7 @@ app.use(helmet({
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['http://localhost:8080' || 'http://localhost:8080'] // FRONTEND_URL should be set in production env
+    ? ['https://smart-ges.vercel.app' || 'https://smart-ges.vercel.app'] // FRONTEND_URL should be set in production env
     : ['http://localhost:8080', 'http://localhost:5173'], // Common dev ports
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -85,7 +85,7 @@ const startServer = async () => {
     // Start listening
     app.listen(config.PORT, () => {
       logger.info(`🚀 RealTech Holding API running on port ${config.PORT}`);
-      logger.info(`📊 Dashboard: http://localhost:${config.PORT}/api/health`);
+      logger.info(`📊 Dashboard: https://smart-ges.vercel.app:${config.PORT}/api/health`);
       logger.info(`🔐 Environment: ${config.NODE_ENV}`);
 
       if (config.NODE_ENV === 'development') {
