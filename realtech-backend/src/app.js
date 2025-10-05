@@ -28,10 +28,24 @@ app.use(helmet({
 }));
 
 // CORS configuration
+// Use configured FRONTEND_URL in production, but keep common dev origins available locally.
+const allowedOrigins = [];
+if (config.FRONTEND_URL) {
+  allowedOrigins.push(config.FRONTEND_URL);
+}
+if (config.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://localhost:8080', 'http://localhost:5173');
+}
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://smart-ges.vercel.app' || 'https://smart-ges.vercel.app'] // FRONTEND_URL should be set in production env
-    : ['http://localhost:8080', 'http://localhost:5173'], // Common dev ports
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g., mobile clients, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS policy: Origin not allowed'), false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -85,7 +99,7 @@ const startServer = async () => {
     // Start listening
     app.listen(config.PORT, () => {
       logger.info(`🚀 RealTech Holding API running on port ${config.PORT}`);
-      logger.info(`📊 Dashboard: https://smart-ges.vercel.app:${config.PORT}/api/health`);
+      logger.info(`📊 Dashboard: http://localhost:${config.PORT}/api/health`);
       logger.info(`🔐 Environment: ${config.NODE_ENV}`);
 
       if (config.NODE_ENV === 'development') {
