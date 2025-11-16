@@ -2,13 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* RealTech Holding Design System - Professional Blue & Black Palette */
+/* RealTech Holding Design System - Professional Blue & Black Palette
+   - Variables fixed to use full color notations (rgb() / hsl()) for cross-browser consistency.
+   - Keep using Tailwind @apply in components as before.
+*/
 
 @layer base {
   :root {
-    /* Core palette - Use full color functions for cross-browser consistency */
-    --background: rgb(248 250 252);
-    --foreground: rgb(15 23 42);
+    /* Core palette */
+    --background: rgb(248 250 252); /* slate-50 */
+    --foreground: rgb(15 23 42); /* slate-900 */
 
     --card: rgb(255 255 255);
     --card-foreground: rgb(15 23 42);
@@ -16,23 +19,23 @@
     --popover: rgb(255 255 255);
     --popover-foreground: rgb(15 23 42);
 
-    /* Primary - Corporate Blue (use hsl for better tonal variants) */
-    --primary: hsl(220 91% 35%);
+    /* Primary - Corporate Blue (use HSL for tonal variants) */
+    --primary: hsl(220 91% 35%); /* base */
     --primary-foreground: rgb(248 250 252);
     --primary-light: hsl(220 91% 50%);
     --primary-dark: hsl(220 91% 25%);
 
-    /* Secondary */
+    /* Secondary - Elegant Gray-Blue */
     --secondary: hsl(215 25% 27%);
     --secondary-foreground: rgb(248 250 252);
     --secondary-light: hsl(215 20% 65%);
 
-    /* Accent - Gold */
+    /* Accent - Premium Gold/Amber */
     --accent: hsl(45 93% 58%);
     --accent-foreground: rgb(15 23 42);
     --accent-muted: hsl(45 93% 95%);
 
-    /* Status */
+    /* Status colors */
     --success: hsl(142 71% 45%);
     --success-foreground: rgb(255 255 255);
     --warning: hsl(38 92% 50%);
@@ -41,9 +44,9 @@
     --destructive-foreground: rgb(255 255 255);
 
     /* UI elements */
-    --muted: hsl(210 40% 96%);
-    --muted-foreground: rgb(100 7 23);
-    --border: hsl(214 32% 91%);
+    --muted: hsl(210 40% 96%); /* light muted background */
+    --muted-foreground: hsl(210 11% 23%); /* slate-ish text for muted areas */
+    --border: hsl(214 32% 91%); /* slate-200 */
     --input: hsl(214 32% 91%);
     --ring: hsl(220 91% 35%);
 
@@ -53,16 +56,28 @@
     --gradient-accent: linear-gradient(135deg, hsl(45 93% 58%), hsl(38 92% 50%));
     --gradient-hero: linear-gradient(135deg, hsl(220 91% 35%) 0%, hsl(215 25% 27%) 100%);
 
-    /* Sidebar & sizing simplified */
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-primary: 0 10px 30px -10px hsl(220 91% 35% / 0.3);
+
+    /* Spacing and sizing */
     --radius: 0.75rem;
-    --sidebar-background: rgb(0 0 98%);
-    --sidebar-foreground: hsl(240 5.3% 26.1%);
-    --sidebar-primary: hsl(240 5.9% 10%);
-    --sidebar-primary-foreground: rgb(0 0 98%);
+
+    /* Sidebar tokens (kept as full color notations) */
+    --sidebar-background: rgb(249 250 251); /* very light */
+    --sidebar-foreground: hsl(240 6% 26%); /* dark slate */
+    --sidebar-primary: hsl(240 6% 10%); /* near-black */
+    --sidebar-primary-foreground: rgb(248 250 252);
+    --sidebar-accent: hsl(240 5% 96%); /* light accent */
+    --sidebar-accent-foreground: hsl(240 6% 10%);
     --sidebar-border: hsl(220 13% 91%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
   }
 
+  /* Dark theme overrides */
   .dark {
     --background: rgb(15 23 42);
     --foreground: rgb(248 250 252);
@@ -78,21 +93,29 @@
     --primary-light: hsl(220 91% 60%);
     --primary-dark: hsl(220 91% 40%);
 
-    --secondary: hsl(51 65% 85%);
-    --secondary-foreground: rgb(15 23 42);
+    --secondary: hsl(215 15% 35%);
+    --secondary-foreground: rgb(248 250 252);
     --secondary-light: hsl(215 20% 75%);
 
     --accent: hsl(45 93% 58%);
     --accent-foreground: rgb(15 23 42);
 
-    --muted: hsl(51 65% 85%);
-    --muted-foreground: rgb(148 163 184);
-    --border: hsl(51 65% 85%);
-    --input: hsl(51 65% 85%);
+    --success: hsl(142 71% 45%);
+    --success-foreground: rgb(255 255 255);
+    --warning: hsl(38 92% 50%);
+    --warning-foreground: rgb(255 255 255);
+    --destructive: hsl(0 84% 60%);
+    --destructive-foreground: rgb(255 255 255);
+
+    --muted: hsl(210 10% 18%);
+    --muted-foreground: hsl(210 10% 60%);
+    --border: hsl(210 10% 35%);
+    --input: hsl(210 10% 35%);
     --ring: hsl(220 91% 50%);
+
+    --shadow-primary: 0 10px 30px -10px hsl(220 91% 20% / 0.5);
   }
 }
-
 
 /* Custom component styles */
 @layer components {
@@ -126,95 +149,126 @@
     background: var(--gradient-hero);
   }
 
-  /* Glass morphism effect */
+  /* Glass morphism effect (with safe fallback) */
   .glass-effect {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    /* backdrop-filter may be unsupported in some browsers - provide fallback */
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
-  /* Custom scrollbar */
+  /* Custom scrollbar (webkit only) */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
+    background: var(--muted);
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: hsl(var(--primary));
+    background: var(--primary);
     border-radius: 3px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary-dark));
+    background: var(--primary-dark);
+  }
+
+  /* Modal overlay helper - ensure no accidental full-page yellow overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0,0,0,0.45);
+    z-index: 50;
+    pointer-events: auto;
+  }
+
+  /* Buttons with primary color */
+  .btn-primary {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-secondary {
+    background-color: var(--secondary);
+    color: var(--secondary-foreground);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.9rem;
+    box-shadow: var(--shadow-sm);
   }
 }
 
 @layer base {
+  /* Global border application - keep if you have a Tailwind token border-border defined */
   * {
     @apply border-border;
   }
 
+  /* Body uses the css variables for colors. Note: @apply bg-background requires tailwind configured with a matching utility
+     If not configured, replace @apply bg-background text-foreground with:
+       background-color: var(--background);
+       color: var(--foreground);
+  */
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    /* If your Tailwind config doesn't map these vars to utility names, replace the @apply lines below with CSS using var(). */
+    /* fallback to var() for safety: */
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Custom animations */
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes scaleIn {
-    from {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
   }
 
   /* Professional typography */
-  h1 {
-    @apply text-3xl font-bold tracking-tight;
-  }
+  h1 { @apply text-3xl font-bold tracking-tight; }
+  h2 { @apply text-2xl font-semibold tracking-tight; }
+  h3 { @apply text-xl font-semibold; }
+  h4 { @apply text-lg font-medium; }
 
-  h2 {
-    @apply text-2xl font-semibold tracking-tight;
-  }
-
-  h3 {
-    @apply text-xl font-semibold;
-  }
-
-  h4 {
-    @apply text-lg font-medium;
-  }
-
-  /* Focus styles */
+  /* Focus styles (uses ring variable via Tailwind ring color mapping if configured) */
   button:focus-visible,
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible {
-    @apply outline-none ring-2 ring-primary ring-offset-2;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(34, 128, 255, 0.12); /* gentle fallback ring */
+    /* If you want a variable-based ring using --ring, ensure Tailwind ring utilities are configured to read it */
+  }
+
+  /* Small utility helpers */
+  .card {
+    background-color: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .muted {
+    color: var(--muted-foreground);
   }
 }
+
+/* End of CSS file */
