@@ -38,6 +38,9 @@ const Inventory = () => {
       }
       setMovements(mvts);
 
+      // Ensure we have product details for all mouvements so we can display names
+      fetchMissingProducts(mvts);
+
       // simple aggregation by date
       const byDate: Record<string, { in: number; out: number }> = {};
       for (const m of mvts) {
@@ -53,6 +56,36 @@ const Inventory = () => {
     }
   };
 
+  // Fetch product details for any movement referencing a product not present in `products` state
+  const fetchMissingProducts = async (mvts: any[]) => {
+    try {
+      const missing = new Set<string>();
+      const existingIds = new Set(products.map((p: any) => String(p.id)));
+      for (const m of mvts) {
+        if (m.produitid && !existingIds.has(String(m.produitid))) missing.add(String(m.produitid));
+      }
+      if (missing.size === 0) return;
+
+      const fetches = Array.from(missing).map(async (id) => {
+        try {
+          const res: any = await api.products.get(String(id));
+          // normalizeList may return array; API returns object; pick data or res
+          const body = (res && res.data) ? res.data : res;
+          if (body) return body;
+        } catch (e) {
+          return null;
+        }
+        return null;
+      });
+
+      const results = await Promise.all(fetches);
+      const toAdd = results.filter(Boolean) as any[];
+      if (toAdd.length > 0) setProducts(prev => [...prev, ...toAdd]);
+    } catch (e) {
+      console.warn('fetchMissingProducts error', e);
+    }
+  };
+
   const createMovement = async () => {
     // kept for backward compatibility; this function will be replaced by modal submit
     return;
@@ -61,6 +94,7 @@ const Inventory = () => {
   // modal form state
   const [modalOpen, setModalOpen] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [form, setForm] = useState({ produitid: '', quantite: '', type: 'IN', note: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -118,8 +152,19 @@ const Inventory = () => {
     }
   };
 
+  const loadUsers = async () => {
+    try {
+      const res: any = await api.users.list();
+      const list = normalizeList(res);
+      setUsers(list || []);
+    } catch (err: any) {
+      console.warn('Impossible de charger les utilisateurs:', err?.message || err);
+    }
+  };
+
   useEffect(() => {
     loadProducts();
+    loadUsers();
   }, []);
 
   const handleOpenModal = () => {
@@ -241,8 +286,10 @@ const Inventory = () => {
               <div className="space-y-3">
                 {movements.map((m: any) => {
                   const prod = products.find((p: any) => String(p.id) === String(m.produitid));
-                  const prodName = prod ? `${prod.nom}` : `#${m.produitid}`;
+                  const prodName = prod ? `${prod.nom}` : (m.produit_nom || `#${m.produitid}`);
                   const isIn = String(m.type).toUpperCase() === 'IN';
+                  const user = users.find((u: any) => String(u.id) === String(m.utilisateurid));
+                  const userLabel = user ? `${user.prenom ? user.prenom + ' ' : ''}${user.nom || ''}`.trim() : (m.utilisateur_nom || m.utilisateur || (m.utilisateurid ? `#${m.utilisateurid}` : 'N/A'));
                   return (
                     <div key={m.id} className="flex items-center justify-between gap-4 p-4 bg-card rounded-lg shadow-sm">
                       <div className="flex items-center gap-4">
@@ -261,7 +308,7 @@ const Inventory = () => {
                           <div className={isIn ? 'text-green-600 font-semibold text-lg' : 'text-red-600 font-semibold text-lg'}>
                             {isIn ? <><ArrowUpCircle className="inline-block mr-1" />+{m.quantite}</> : <><ArrowDownCircle className="inline-block mr-1" />-{m.quantite}</>}
                           </div>
-                          <div className="text-xs text-muted-foreground">{m.utilisateurid ? `Utilisateur: ${m.utilisateurid}` : 'Utilisateur: N/A'}</div>
+                          <div className="text-xs text-muted-foreground">{m.utilisateurid ? `Utilisateur: ${userLabel}` : 'Utilisateur: N/A'}</div>
                         </div>
                         <Badge variant={isIn ? 'default' : 'destructive'}>{isIn ? 'Entrée' : 'Sortie'}</Badge>
                       </div>

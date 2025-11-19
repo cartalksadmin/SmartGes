@@ -234,7 +234,7 @@ const Tasks = () => {
         }}>
           <DialogTrigger asChild>
             {isAdmin && (
-            <Button className="bg-gradient-primary hover:opacity-90" >
+            <Button >
               <Plus className="h-4 w-4 mr-2" />
               Nouvelle tâche
             </Button>

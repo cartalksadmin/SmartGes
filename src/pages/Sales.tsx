@@ -1,391 +1,386 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { api, normalizeList } from '@/lib/apiClient';
-import { Vente } from '@/types/api';
-import { 
-  Search, 
-  Receipt, 
+import { api, normalizeList, apiFetch } from '@/lib/apiClient';
+import { Commande } from '@/types/api';
+import {
+  Search,
+  Receipt,
   Eye,
   Calendar,
   User,
-  Euro,
-  FileText,
-  Loader2
+  TrendingUp,
+  Loader2,
+  DollarSign,
+  Package,
+  Clock,
 } from 'lucide-react';
 import SaleDetail from '@/components/details/SaleDetail';
+import RecuPaiementRealtech from '@/components/details/RecuPaiementRealtech';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const Sales = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sales, setSales] = useState<Vente[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailId, setDetailId] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const [paiementsByVente, setPaiementsByVente] = useState<Record<string, any[]>>({});
+  const [recuOpen, setRecuOpen] = useState(false);
+  const [recuData, setRecuData] = useState<any | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sales, setSales] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+
+  // === Chargement ===
   useEffect(() => {
     loadSales();
   }, []);
 
+  useEffect(() => {
+    if (sales.length === 0) return;
+
+    const loadPaiements = async () => {
+      const map: Record<string, any[]> = {};
+      for (const sale of sales) {
+        try {
+          const res = await apiFetch(`/api/commandes/${sale.id}/paiements`);
+          map[sale.id] = Array.isArray(res?.data?.paiements) ? res.data.paiements : [];
+        } catch {
+          map[sale.id] = [];
+        }
+      }
+      setPaiementsByVente(map);
+    };
+    loadPaiements();
+  }, [sales]);
+
   const loadSales = async () => {
     try {
       setLoading(true);
-      const response = await api.ventes.list();
-      const salesList = normalizeList<Vente>(response);
-      setSales(salesList);
+      const response = await apiFetch('/api/commandes');
+      setSales(normalizeList<any>(response));
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible de charger les ventes",
-        variant: "destructive"
-      });
+      toast({ title: 'Erreur', description: error.message || 'Impossible de charger les ventes', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredSales = sales.filter(sale =>
-    // basic search
-    (sale.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (sale.numero || '').toLowerCase().includes(searchTerm.toLowerCase())
-  ).filter(sale => {
-    // status filter: prefer statut_paiement then infer from montant
-    const key = (sale as any).statut_paiement || ((sale as any).paiement_summary as any)?.statut_paiement || (() => {
-      const paid = Number((sale as any).montant_paye || ((sale as any).paiement_summary as any)?.montant_paye || 0);
-      const total = Number(sale.montant || 0);
-      if (paid <= 0) return 'NON_PAYEE';
-      if (paid >= total) return 'PAYEE';
-      return 'PARTIELLE';
-    })();
-    if (statusFilter && statusFilter !== 'ALL' && String(key).toUpperCase() !== String(statusFilter).toUpperCase()) {
-      return false;
-    }
+  // === Calculs ===
+  const getTotal = (sale: any) => Number(sale.total_cmd || sale.montant || 0);
+  const getPaid = (sale: any) => Number(sale.montant_paye || 0);
 
-    // date range filter
-    const createdAt = sale.created_at || (sale as any).date || null;
-    if (dateFrom) {
-      if (!createdAt || new Date(createdAt) < new Date(dateFrom)) return false;
-    }
-    if (dateTo) {
-      if (!createdAt) return false;
-      const end = new Date(dateTo);
-      end.setHours(23,59,59,999);
-      if (new Date(createdAt) > end) return false;
-    }
+  const getPaymentStatus = (sale: any): 'PAYEE' | 'PARTIELLE' | 'NON_PAYEE' => {
+    const total = getTotal(sale);
+    const paid = getPaid(sale);
+    if (paid >= total) return 'PAYEE';
+    if (paid > 0) return 'PARTIELLE';
+    return 'NON_PAYEE';
+  };
 
+  const formatDate = (d?: string) =>
+    d ? new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+
+  const filteredSales = sales.filter(sale => {
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const client = sale.client ? `${sale.client.prenom || ''} ${sale.client.nom || ''}`.toLowerCase() : '';
+      if (![sale.code, sale.numero, client].some(s => String(s || '').toLowerCase().includes(term))) return false;
+    }
     return true;
   });
 
-  const grouped = filteredSales.reduce((acc: Record<string, Vente[]>, s) => {
-    const key = ((s as any).statut_paiement || (() => {
-      const paid = Number((s as any).montant_paye || 0);
-      const total = Number(s.montant || 0);
-      if (paid <= 0) return 'PAYEE';
-      if (paid >= total) return 'PAYEE';
-      return 'PARTIELLE';
-    })()).toString().toUpperCase();
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(s);
-    return acc;
-  }, {} as Record<string, Vente[]>);
-
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      PAYEE: "default" as const,
-      PARTIELLE: "secondary" as const,
-      NON_PAYEE: "destructive" as const,
-    };
-    return variants[status as keyof typeof variants] || "secondary" as const;
+  const grouped = {
+    PAYEE: filteredSales.filter(s => getPaymentStatus(s) === 'PAYEE'),
+    PARTIELLE: filteredSales.filter(s => getPaymentStatus(s) === 'PARTIELLE'),
+    NON_PAYEE: filteredSales.filter(s => getPaymentStatus(s) === 'NON_PAYEE'),
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels = {
-      PAYEE: "Payée",
-      PARTIELLE: "Partiellement payée",
-      NON_PAYEE: "Non payée",
-    };
-    return labels[status as keyof typeof labels] || status;
+  const statusConfig = {
+    PAYEE: { label: 'Payée', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-400' },
+    PARTIELLE: { label: 'Partielle', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-400' },
+    NON_PAYEE: { label: 'Non payée', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-400' },
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('fr-FR');
-  };
+  // === Carte vente ===
+  const SaleCard = ({ sale, status }: { sale: any; status: 'PAYEE' | 'PARTIELLE' | 'NON_PAYEE' }) => {
+    const config = statusConfig[status];
+    const total = getTotal(sale);
+    const paid = getPaid(sale);
 
-  // --- Chart helpers ---
-  const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
-
-  const getDailySeries = (days = 30) => {
-    const now = new Date();
-    const map = new Map<string, number>();
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      map.set(key, 0);
-    }
-    sales.forEach(s => {
-      const d = s.created_at ? new Date(s.created_at).toISOString().slice(0,10) : null;
-      if (d && map.has(d)) map.set(d, (map.get(d) || 0) + Number(s.montant || 0));
-    });
-    return Array.from(map.entries()).map(([k,v]) => ({ date: k, value: v }));
-  };
-
-  const getMonthlySeries = (months = 12) => {
-    const now = new Date();
-    const map = new Map<string, number>();
-    for (let i = months - 1; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      map.set(key, 0);
-    }
-    sales.forEach(s => {
-      if (!s.created_at) return;
-      const d = new Date(s.created_at);
-      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      if (map.has(key)) map.set(key, (map.get(key) || 0) + Number(s.montant || 0));
-    });
-    return Array.from(map.entries()).map(([k,v]) => ({ period: k, value: v }));
-  };
-
-  const getSemestrialSeries = (sem = 6) => getMonthlySeries(sem);
-
-  const Sparkline = ({ points }: { points: number[] }) => {
-    const w = 200; const h = 40; const max = Math.max(...points, 1);
-    const step = points.length > 1 ? w / (points.length - 1) : w;
-    const path = points.map((v, i) => `${i===0?'M':'L'} ${i*step} ${h - (v/max)*h}`).join(' ');
     return (
-      <svg width={w} height={h} className="block">
-        <path d={path} stroke="#0ea5e9" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      <Card className={`overflow-hidden hover:shadow-2xl transition-all duration-300 border-l-8 ${config.border} ${config.bg} group`}>
+        <CardHeader className="bg-gradient-to-r from-transparent via-muted/20 to-transparent">
+          <div className="flex justify-between items-start">
+            <div className="space-y-3">
+              <div className="flex items-center gap-4">
+                <h3 className="text-2xl font-bold text-primary flex items-center gap-3">
+                  <Package className="h-7 w-7 text-primary/80" />
+                  {sale.code || `CMD-${sale.id}`}
+                </h3>
+                <Badge variant={status === 'PAYEE' ? 'default' : status === 'PARTIELLE' ? 'secondary' : 'destructive'} className="text-base px-4 py-1">
+                  {config.label}
+                </Badge>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {formatDate(sale.created_at)}
+                </span>
+                <span className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  {sale.client ? `${sale.client.prenom || ''} ${sale.client.nom || ''}`.trim() || 'Client occasionnel' : 'Client occasionnel'}
+                </span>
+                {sale.utilisateur && (
+                  <span className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Par {sale.utilisateur.prenom || ''} {sale.utilisateur.nom || ''}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="text-right space-y-2">
+              <div className="text-4xl font-bold text-primary flex items-center justify-end gap-3">
+                <DollarSign className="h-10 w-10" />
+                {total.toLocaleString()} FCFA
+              </div>
+              {status === 'PARTIELLE' && (
+                <div className="text-lg">
+                  <span className="text-muted-foreground">Payé :</span>{' '}
+                  <span className="font-bold text-orange-600">{paid.toLocaleString()} FCFA</span>
+                </div>
+              )}
+              {status === 'NON_PAYEE' && (
+                <div className="text-lg text-red-600 font-medium">
+                  À régler intégralement
+                </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-6 space-y-6">
+          <div className="flex flex-wrap gap-4">
+            <Button
+              size="lg"
+              onClick={() => { setRecuData(sale); setRecuOpen(true); }}
+              className="gap-3 shadow-lg hover:shadow-xl"
+            >
+              <Receipt className="h-5 w-5" />
+              Reçu de paiement
+            </Button>
+
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => { setDetailId(sale.id); setDetailOpen(true); }}
+              className="gap-3"
+            >
+              <Eye className="h-5 w-5" />
+              Détails complets
+            </Button>
+          </div>
+
+          {/* Historique des paiements */}
+          {paiementsByVente[sale.id]?.length > 0 && (
+            <div className="bg-muted/40 rounded-2xl p-6 border">
+              <h4 className="font-bold text-primary text-lg mb-4 flex items-center gap-3">
+                <TrendingUp className="h-6 w-6" />
+                Historique des règlements
+              </h4>
+              <div className="space-y-4">
+                {paiementsByVente[sale.id].map((p: any, i: number) => (
+                  <div key={i} className="flex justify-between items-center py-3 border-b last:border-0">
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline" className="text-base px-4">
+                        {p.mode_paiement || 'Inconnu'}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {formatDate(p.date_paiement || p.created_at)}
+                      </span>
+                    </div>
+                    <span className="text-2xl font-bold text-green-600">
+                      +{Number(p.montant || 0).toLocaleString()} FCFA
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     );
   };
 
-  const daily = getDailySeries(30);
-  const monthly = getMonthlySeries(12);
-  const semestrial = getSemestrialSeries(6);
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-primary mb-2">Gestion des Ventes</h1>
-          <p className="text-muted-foreground">
-            Suivez et gérez toutes les ventes
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 p-6 md:p-10">
+      <div className="max-w-7xl mx-auto space-y-12">
 
-      {/* Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Recherche</CardTitle>
-        </CardHeader>
-        <CardContent>
+        {/* Header Premium */}
+        <div className="text-center mb-16">
+          <h1 className="text-6xl font-bold text-primary mb-4 flex items-center justify-center gap-5">
+            <DollarSign className="h-16 w-16 text-primary" />
+            Historique des ventes & paiements
+          </h1>
+          <p className="text-2xl text-muted-foreground">Visualisez tous vos encaissements en un coup d'œil</p>
+        </div>
+
+        {/* Total global */}
+        <div className="text-center mb-12">
+          <div className="inline-block bg-primary/10 rounded-3xl px-12 py-8 shadow-2xl">
+            <div className="text-5xl font-bold text-primary">
+              {filteredSales.reduce((sum, s) => sum + getTotal(s), 0).toLocaleString()} FCFA
+            </div>
+            <div className="text-xl text-muted-foreground mt-2">Total des ventes affichées</div>
+          </div>
+        </div>
+
+        {/* Recherche */}
+        <div className="max-w-2xl mx-auto mb-12">
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" />
             <Input
-              placeholder="Rechercher par numéro ou code..."
+              placeholder="Rechercher par code, client, numéro..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-16 text-lg h-16 rounded-2xl shadow-lg"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Ventes - 30 derniers jours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xl font-bold">{sum(daily.map(d => d.value)).toFixed(2)} FCFA</div>
-                <div className="text-sm text-muted-foreground">Total sur 30 jours</div>
-              </div>
-              <div>
-                <Sparkline points={daily.map(d => d.value)} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Contenu */}
+        <div className="space-y-20">
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Ventes - 12 mois</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xl font-bold">{sum(monthly.map(d => d.value)).toFixed(2)} FCFA</div>
-                <div className="text-sm text-muted-foreground">Total sur 12 mois</div>
-              </div>
-              <div>
-                <Sparkline points={monthly.map(d => d.value)} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Ventes - 6 mois</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xl font-bold">{sum(semestrial.map(d => d.value)).toFixed(2)} FCFA</div>
-                <div className="text-sm text-muted-foreground">Total sur 6 mois</div>
-              </div>
-              <div>
-                <Sparkline points={semestrial.map(d => d.value)} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters + Sales List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filtres</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher par numéro ou code..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-muted-foreground">Statut paiement</label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(String(v || 'ALL'))}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Tous" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Tous</SelectItem>
-                  <SelectItem value="PAYEE">Payée</SelectItem>
-                  <SelectItem value="PARTIELLE">Partiellement payée</SelectItem>
-                  <SelectItem value="NON_PAYEE">Non payée</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm text-muted-foreground">Date début</label>
-              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            </div>
-
-            <div>
-              <label className="text-sm text-muted-foreground">Date fin</label>
-              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <Button variant="ghost" onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo(''); setSearchTerm(''); }}>Effacer</Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-6">
-        {['PAYEE','PARTIELLE'].map((section) => (
-          grouped[section] && grouped[section].length > 0 ? (
-            <div key={section}>
-              <h2 className="text-lg font-semibold mb-2">
-                {section === 'PAYEE' ? 'Ventes payées' : 'Ventes partiellement payées'}
+          {/* Ventes payées */}
+          {grouped.PAYEE.length > 0 && (
+            <section>
+              <h2 className="text-4xl font-bold text-green-600 mb-10 text-center flex items-center justify-center gap-4">
+                <TrendingUp className="h-12 w-12" />
+                Ventes entièrement réglées
+                <Badge variant="default" className="text-2xl px-6 py-2 ml-6">{grouped.PAYEE.length}</Badge>
               </h2>
-              <div className="space-y-4">
-                {grouped[section].map((sale) => (
-                  <Card key={sale.id} className="hover:shadow-lg transition-shadow animate-scale-in">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <CardTitle className="text-xl text-primary">{sale.code}</CardTitle>
-                          <CardDescription className="flex items-center gap-4 text-sm">
-                            <span className="flex items-center gap-1">
-                              <FileText className="h-3 w-3" />
-                              Numéro: {sale.numero}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {formatDate(sale.created_at)}
-                            </span>
-                          </CardDescription>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Badge variant={getStatusBadge(section)}>{getStatusLabel(section)}</Badge>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-primary">{(() => { const num = Number(sale.montant || 0); return `${num.toFixed(2)} FCFA`; })()}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                          {sale.recu && (
-                            <Button variant="outline" size="sm">
-                              <Receipt className="h-4 w-4 mr-1" />
-                              Reçu
-                            </Button>
-                          )}
-                          {sale.commande && (
-                            <div className="text-sm text-muted-foreground">Commande: {sale.commande.code}</div>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => { setDetailId(sale.id); setDetailOpen(true); }}>
-                            <Eye className="h-4 w-4 mr-1" />Détails
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="space-y-8">
+                {grouped.PAYEE.map(sale => <SaleCard key={sale.id} sale={sale} status="PAYEE" />)}
               </div>
-            </div>
-          ) : null
-        ))}
-      </div>
+            </section>
+          )}
 
-      {filteredSales.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Aucune vente trouvée</h3>
-            <p className="text-muted-foreground mb-4">
-              Aucune vente ne correspond à votre recherche
-            </p>
-            <Button variant="outline" onClick={() => setSearchTerm('')}>
-              Effacer la recherche
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-      <SaleDetail id={detailId} open={detailOpen} onOpenChange={setDetailOpen} />
+          {/* Ventes partielles */}
+          {grouped.PARTIELLE.length > 0 && (
+            <section>
+              <h2 className="text-4xl font-bold text-orange-600 mb-10 text-center flex items-center justify-center gap-4">
+                <Clock className="h-12 w-12" />
+                Ventes partiellement réglées
+                <Badge variant="secondary" className="text-2xl px-6 py-2 ml-6">{grouped.PARTIELLE.length}</Badge>
+              </h2>
+              <div className="space-y-8">
+                {grouped.PARTIELLE.map(sale => <SaleCard key={sale.id} sale={sale} status="PARTIELLE" />)}
+              </div>
+            </section>
+          )}
+
+          {/* Ventes non payées */}
+          {grouped.NON_PAYEE.length > 0 && (
+            <section>
+              <h2 className="text-4xl font-bold text-red-600 mb-10 text-center flex items-center justify-center gap-4">
+                <DollarSign className="h-12 w-12" />
+                Ventes en attente de règlement
+                <Badge variant="destructive" className="text-2xl px-6 py-2 ml-6">{grouped.NON_PAYEE.length}</Badge>
+              </h2>
+              <div className="space-y-8">
+                {grouped.NON_PAYEE.map(sale => <SaleCard key={sale.id} sale={sale} status="NON_PAYEE" />)}
+              </div>
+            </section>
+          )}
+
+          {/* Vide */}
+          {filteredSales.length === 0 && (
+            <div className="text-center py-32">
+              <div className="bg-muted/50 w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-8">
+                <Receipt className="h-16 w-16 text-muted-foreground" />
+              </div>
+              <h3 className="text-4xl font-bold text-muted-foreground mb-4">Aucune vente trouvée</h3>
+              <p className="text-xl text-muted-foreground">Essayez de modifier vos critères de recherche</p>
+            </div>
+          )}
+        </div>
+
+        {/* Dialog Reçu */}
+        <Dialog open={recuOpen} onOpenChange={setRecuOpen}>
+          <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto bg-gray-50">
+            <DialogHeader>
+              <DialogTitle className="text-3xl text-center">Reçu de paiement</DialogTitle>
+            </DialogHeader>
+            {recuData && (
+              <div className="bg-white rounded-2xl shadow-2xl p-10">
+                <RecuPaiementRealtech
+                  numero={recuData.code || recuData.numero || `REC-${recuData.id}`}
+                  date={recuData.created_at || new Date().toISOString()}
+                  client={recuData.client || { nom: '', prenom: '' }}
+                  commande={{
+                    numero: recuData.code || recuData.numero || '',
+                    date: recuData.created_at || '',
+                    total: getTotal(recuData),
+                    items: (recuData.items || recuData.produits || []).map((it: any) => ({
+                      nom: it.nom || it.produit_nom || 'Article',
+                      quantite: Number(it.quantite || 1),
+                      prix_unitaire: Number(it.prix_unitaire || 0),
+                      total: Number(it.total || it.quantite * it.prix_unitaire || 0),
+                    })),
+                  }}
+                  paiement={{
+                    montant: getPaid(recuData),
+                    mode: paiementsByVente[recuData.id]?.[0]?.mode_paiement || 'Non spécifié',
+                    date: paiementsByVente[recuData.id]?.[0]?.date_paiement || recuData.created_at,
+                  }}
+                  reste={getTotal(recuData) - getPaid(recuData)}
+                  entreprise={{ nom: 'REALTECH', adresse: 'Douala, Cameroun', telephone: '+237 XXX XXX XXX', email: 'contact@realtech.cm' }}
+                  paiements={paiementsByVente[recuData.id] || []}
+                />
+              </div>
+            )}
+            <div className="mt-8 text-center">
+              <Button size="lg" className="text-xl px-12 py-6" onClick={() => window.print()}>
+                Imprimer le reçu
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <SaleDetail id={detailId} open={detailOpen} onOpenChange={setDetailOpen} />
+      </div>
     </div>
   );
 };

@@ -14,6 +14,12 @@ import ProductDetail from '@/components/details/ProductDetail';
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+  const [stockMin, setStockMin] = useState('');
+  const [stockMax, setStockMax] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -64,10 +70,17 @@ const Products = () => {
     }
   };
 
-  const filteredProducts = products.filter(product =>
-    product.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter ? (product.categorie?.toLowerCase() === categoryFilter.toLowerCase()) : true;
+    const matchesPriceMin = priceMin ? Number(product.prix_unitaire) >= Number(priceMin) : true;
+    const matchesPriceMax = priceMax ? Number(product.prix_unitaire) <= Number(priceMax) : true;
+    const matchesStockMin = stockMin ? Number(product.stock_actuel) >= Number(stockMin) : true;
+    const matchesStockMax = stockMax ? Number(product.stock_actuel) <= Number(stockMax) : true;
+    const matchesActive = activeFilter === 'all' ? true : activeFilter === 'active' ? product.actif : !product.actif;
+    return matchesSearch && matchesCategory && matchesPriceMin && matchesPriceMax && matchesStockMin && matchesStockMax && matchesActive;
+  });
 
   const getStockStatus = (stock: number) => {
     if (stock === 0) return { label: "Rupture", variant: "destructive" as const };
@@ -85,7 +98,7 @@ const Products = () => {
           </p>
         </div>
         {isAdmin && (
-          <Button className="bg-gradient-primary hover:opacity-90" onClick={() => { setSelectedProduct(null); setFormOpen(true); }}>
+          <Button  onClick={() => { setSelectedProduct(null); setFormOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             Ajouter un produit
           </Button>
@@ -94,17 +107,33 @@ const Products = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Recherche</CardTitle>
+          <CardTitle className="text-lg">Filtres</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher un produit..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher un produit..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Input placeholder="Catégorie" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} />
+            <div className="flex gap-2">
+              <Input type="number" min={0} placeholder="Prix min" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
+              <Input type="number" min={0} placeholder="Prix max" value={priceMax} onChange={e => setPriceMax(e.target.value)} />
+            </div>
+            <div className="flex gap-2">
+              <Input type="number" min={0} placeholder="Stock min" value={stockMin} onChange={e => setStockMin(e.target.value)} />
+              <Input type="number" min={0} placeholder="Stock max" value={stockMax} onChange={e => setStockMax(e.target.value)} />
+            </div>
+            <select className="border rounded p-2" value={activeFilter} onChange={e => setActiveFilter(e.target.value)}>
+              <option value="all">Tous</option>
+              <option value="active">Actifs</option>
+              <option value="inactive">Inactifs</option>
+            </select>
           </div>
         </CardContent>
       </Card>

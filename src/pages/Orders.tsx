@@ -1,399 +1,379 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { api, normalizeList } from '@/lib/apiClient';
+import { api, normalizeList, apiFetch } from '@/lib/apiClient';
+import showPaymentModal from '@/lib/showPaymentModal';
 import { Commande } from '@/types/api';
-import { Search, Eye, FileText, Edit, CheckCircle, Plus, Loader2 } from 'lucide-react';
+import {
+  Search,
+  Eye,
+  FileText,
+  Edit,
+  Plus,
+  Loader2,
+  Trash2,
+  ReceiptText,
+  Calendar,
+  User,
+  DollarSign,
+  Package,
+} from 'lucide-react';
 import Swal from 'sweetalert2';
 import OrderDetail from '@/components/details/OrderDetail';
 import OrderForm from '@/components/forms/OrderForm';
+import InvoicePreviewModal from '@/components/ui/InvoicePreviewModal';
 
 const Orders: React.FC = () => {
+  const { toast } = useToast();
+  const { isAdmin } = useAuth();
+
+  const [activeSection, setActiveSection] = useState<'ALL' | 'PAYEE' | 'PARTIELLE' | 'NON_PAYEE' | 'SUPPRIMEES'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [orders, setOrders] = useState<Commande[]>([]);
+  const [deletedOrders, setDeletedOrders] = useState<Commande[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
+
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formInitial, setFormInitial] = useState<Commande | null>(null);
-  const [generatingInvoice, setGeneratingInvoice] = useState<string | null>(null);
-  const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const [previewInvoiceId, setPreviewInvoiceId] = useState<string | null>(null);
+  const [previewInvoiceData, setPreviewInvoiceData] = useState<any | null>(null);
 
-  useEffect(() => { loadOrders(); }, []);
-
+  // === Chargement ===
   const loadOrders = async () => {
     try {
       setLoading(true);
       const res = await api.commandes.list();
-      const data = normalizeList<Commande>(res);
-      setOrders(data);
+      setOrders(normalizeList<Commande>(res));
     } catch (err: any) {
       toast({ title: 'Erreur', description: err.message || 'Impossible de charger les commandes', variant: 'destructive' });
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getPaymentStatus = (order: Commande) => {
-    const explicit = (order as any).statut_paiement;
-    if (explicit) return String(explicit).toUpperCase();
-    const paid = Number((order as any).montant_paye || 0);
-    const total = Number((order as any).total_cmd || 0);
-    if (paid <= 0) return 'NON_PAYEE';
+  useEffect(() => { loadOrders(); }, []);
+
+  // === Suppression ===
+  const handleDeleteOrder = async (order: Commande) => {
+    const result = await Swal.fire({
+      title: 'Supprimer la commande ?',
+      text: `La commande ${order.code || order.numero} sera archivée définitivement.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, supprimer',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#ef4444',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await api.commandes.delete(order.id);
+      toast({ title: 'Commande supprimée', description: 'Archivée avec succès' });
+      setDeletedOrders(prev => [...prev, { ...order, deletedat: new Date().toISOString() } as Commande]);
+      setOrders(prev => prev.filter(o => o.id !== order.id));
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message || 'Échec de la suppression', variant: 'destructive' });
+    }
+  };
+
+  // === Édition ===
+  const handleEdit = async (order: Commande) => {
+    try {
+      const res: any = await api.commandes.get(order.id);
+      const cmd = res.data?.commande || res.data || res;
+      setFormInitial(cmd);
+      setFormOpen(true);
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message || 'Impossible de charger la commande', variant: 'destructive' });
+    }
+  };
+
+  // === Paiement ===
+ const handlePay = async (order: Commande) => {
+    try {
+      const total = Number((order as any).total_cmd || 0);
+      const paid = Number((order as any).montant_paye || 0);
+
+      const result = await showPaymentModal({
+        title: `Règlement • ${order.code || order.numero}`,
+        total,
+        alreadyPaid: paid,
+      });
+
+      if (!result) return;
+
+      await api.commandes.pay(String(order.id), {
+        montant: result.montant,
+        mode_paiement: result.mode,
+        statut_paiement: result.statut,
+      });
+
+      toast({ title: 'Paiement enregistré !', description: `${result.montant.toLocaleString()} FCFA` });
+      loadOrders();
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
+    } catch (err: any) {
+      toast({ title: 'Erreur de paiement', description: err.message || 'Une erreur est survenue', variant: 'destructive' });
+    }
+  };
+
+  // === Statut & Filtrage ===
+  const getPaymentStatus = (o: Commande): 'PAYEE' | 'PARTIELLE' | 'NON_PAYEE' => {
+    const paid = Number((o as any).montant_paye || 0);
+    const total = Number((o as any).total_cmd || 0);
     if (paid >= total) return 'PAYEE';
-    return 'PARTIELLE';
+    if (paid > 0) return 'PARTIELLE';
+    return 'NON_PAYEE';
   };
 
-  const filtered = orders.filter(o => {
-    // search
-    const term = searchTerm.trim().toLowerCase();
-    if (term) {
-      const match = (o.code || '').toLowerCase().includes(term) || (o.numero || '').toLowerCase().includes(term) || ((o.client && ((o.client.nom||'') + ' ' + (o.client.prenom||'')).toLowerCase().includes(term)));
-      if (!match) return false;
-    }
-    // status filter
-    const key = getPaymentStatus(o);
-    if (statusFilter && statusFilter !== 'ALL' && String(key).toUpperCase() !== String(statusFilter).toUpperCase()) return false;
-    // date range
-    const created = (o as any).created_at || null;
-    if (dateFrom) {
-      if (!created || new Date(created) < new Date(dateFrom)) return false;
-    }
-    if (dateTo) {
-      if (!created) return false;
-      const end = new Date(dateTo); end.setHours(23,59,59,999);
-      if (new Date(created) > end) return false;
+  const filteredOrders = orders.filter(o => {
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const client = o.client ? `${o.client.prenom} ${o.client.nom}`.toLowerCase() : '';
+      if (![o.code, o.numero, client].some(s => s?.toLowerCase().includes(term))) return false;
     }
     return true;
   });
 
-  const grouped = filtered.reduce((acc: Record<string, Commande[]>, o) => {
-    const k = getPaymentStatus(o);
-    acc[k] = acc[k] || [];
-    acc[k].push(o);
-    return acc;
-  }, {} as Record<string, Commande[]>);
-
-  const getStatusBadge = (status: string): 'default' | 'secondary' | 'destructive' => {
-    const map: Record<string, 'default' | 'secondary' | 'destructive'> = { PAYEE: 'default', PARTIELLE: 'secondary', NON_PAYEE: 'destructive' };
-    return map[status] || 'secondary';
+  const grouped = {
+    PAYEE: filteredOrders.filter(o => getPaymentStatus(o) === 'PAYEE'),
+    PARTIELLE: filteredOrders.filter(o => getPaymentStatus(o) === 'PARTIELLE'),
+    NON_PAYEE: filteredOrders.filter(o => getPaymentStatus(o) === 'NON_PAYEE'),
   };
 
-  const getStatusLabel = (status: string) => ({ PAYEE: 'Payée', PARTIELLE: 'Partiellement payée', NON_PAYEE: 'Non payée' } as Record<string,string>)[status] || status;
+  const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
 
-  const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('fr-FR') : 'N/A';
-
-  const attemptDownloadInvoice = async (orderId: string) => {
-    const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-    const base = `${API_BASE || ''}/api/commandes/${orderId}/invoice/download`;
-    const inlineUrl = `${base}?inline=true`;
-    const token = localStorage.getItem('accessToken') || '';
-    const headers: Record<string,string> = { 'Accept': 'application/pdf' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    // Poll with HEAD to ensure file is present, then open inline in new tab and trigger download
-    for (let i = 0; i < 6; i++) {
-        try {
-        const r = await fetch(base, { method: 'HEAD', headers });
-        if (r.ok) {
-          // open inline view in new tab
-          try { window.open(inlineUrl, '_blank'); } catch (e) {}
-          // fetch blob and trigger download
-          try {
-            const blobResp = await fetch(base, { headers });
-            if (blobResp.ok) {
-              const blob = await blobResp.blob();
-              const urlBlob = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = urlBlob;
-              const disp = blobResp.headers.get('content-disposition');
-              let filename = `facture-${orderId}.pdf`;
-              if (disp) {
-                const m = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/.exec(disp);
-                if (m) filename = decodeURIComponent(m[1] || m[2] || filename);
-              }
-              a.download = filename;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              window.URL.revokeObjectURL(urlBlob);
-              toast({ title: 'Téléchargement', description: `La facture a été téléchargée dans votre dossier Téléchargements: ${filename}` });
-              return;
-            }
-          } catch (e) {
-            // ignore fetch/download errors and fallthrough to open tab only
-          }
-          return;
-        }
-      } catch (e) {
-        // ignore and retry
-      }
-      await new Promise(r => setTimeout(r, 300 * (i + 1)));
-    }
-
-    // final attempt: open inline URL in new tab
-    try { window.open(inlineUrl, '_blank'); } catch { }
+  const statusConfig = {
+    PAYEE: { label: 'Payée', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+    PARTIELLE: { label: 'Partielle', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
+    NON_PAYEE: { label: 'Non payée', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
   };
 
-  const attemptDownloadReceipt = async (orderId: string) => {
-    const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-    const base = `${API_BASE || ''}/api/commandes/${orderId}/receipt/download`;
-    const inlineUrl = `${base}?inline=true`;
-    const token = localStorage.getItem('accessToken') || '';
-    const headers: Record<string,string> = { 'Accept': 'application/pdf' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    // Poll with HEAD to ensure file is present, then open inline in new tab and trigger download
-    for (let i = 0; i < 8; i++) {
-      try {
-        const r = await fetch(base, { method: 'HEAD', headers });
-        if (r.ok) {
-          // open inline view in new tab
-          try { window.open(inlineUrl, '_blank'); } catch (e) {}
-          // fetch blob and trigger download
-          try {
-            const blobResp = await fetch(base, { headers });
-            if (blobResp.ok) {
-              const blob = await blobResp.blob();
-              const urlBlob = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = urlBlob;
-              const disp = blobResp.headers.get('content-disposition');
-              let filename = `recu-${orderId}.pdf`;
-              if (disp) {
-                const m = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/.exec(disp);
-                if (m) filename = decodeURIComponent(m[1] || m[2] || filename);
-              }
-              a.download = filename;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              window.URL.revokeObjectURL(urlBlob);
-              toast({ title: 'Téléchargement', description: `Le reçu a été téléchargé: ${filename}` });
-              return;
-            }
-          } catch (e) {
-            // ignore fetch/download errors and fallthrough to open tab only
-          }
-          return;
-        }
-      } catch (e) {
-        // ignore and retry
-      }
-      await new Promise(r => setTimeout(r, 300 * (i + 1)));
-    }
-
-    try { window.open(inlineUrl, '_blank'); } catch { }
-  };
-
-  const handleGenerateInvoice = async (orderId: string) => {
-    try {
-      setGeneratingInvoice(orderId);
-      // trigger server-side generation
-      await api.commandes.generateInvoice(orderId);
-      // attempt to open inline and download to user's Downloads
-      await attemptDownloadInvoice(orderId);
-  // notify other UI parts that notifications may have changed (server created invoice/paiement notifications)
-  try { window.dispatchEvent(new CustomEvent('notifications-updated')); } catch (e) {}
-  toast({ title: 'Facture générée' });
-      loadOrders();
-    } catch (err: any) {
-      toast({ title: 'Erreur', description: err.message || String(err), variant: 'destructive' });
-    } finally {
-      setGeneratingInvoice(null);
-    }
-  };
-
-  const handlePay = async (order: Commande) => {
-  try {
+  // === Carte commande ===
+  const OrderCard = ({ order, status }: { order: Commande; status: 'PAYEE' | 'PARTIELLE' | 'NON_PAYEE' }) => {
+    const config = statusConfig[status];
     const total = Number((order as any).total_cmd || 0);
     const paid = Number((order as any).montant_paye || 0);
-    const remaining = Math.max(total - paid, 0);
-    const html = `<div style="text-align:left"><label>Montant</label><input id="swal-montant" type="number" min="0" step="0.01" class="swal2-input" value="${remaining}" /><label>Type</label><select id="swal-statut" class="swal2-select"><option value="PAYEE">Payée</option><option value="PARTIELLE">Partielle</option></select></div>`;
-    const res = await Swal.fire({ title: `Règlement ${order.code || order.numero || ''}`, html, focusConfirm: false, showCancelButton: true, preConfirm: () => {
-      const m = (document.getElementById('swal-montant') as HTMLInputElement | null)?.value;
-      const s = (document.getElementById('swal-statut') as HTMLSelectElement | null)?.value || 'PARTIELLE';
-      const montant = m ? Number(m) : NaN;
-      if (Number.isNaN(montant) || montant <= 0) { Swal.showValidationMessage('Montant invalide'); return null; }
-      return { montant, statut: s };
-    } });
-    if (!res || !res.isConfirmed || !res.value) return;
-    
-    // ask for payment mode (cash, mobile_money, carte, cheque, virement)
-    const { value: mode } = await Swal.fire({ 
-      title: 'Mode de paiement', 
-      input: 'select', 
-      inputOptions: { cash: 'Cash', mobile_money: 'Mobile Money', carte: 'Carte', cheque: 'Chèque', virement: 'Virement' }, 
-      inputValue: 'cash', 
-      showCancelButton: true 
-    });
-    if (!mode) return;
-    
-    await api.commandes.pay(String(order.id), { 
-      montant: Number(res.value.montant), 
-      mode_paiement: mode, 
-      statut_paiement: res.value.statut 
-    });
-    toast({ title: 'Paiement enregistré' });
-    // notify UI (Sidebar will reload notifications)
-    try { window.dispatchEvent(new CustomEvent('notifications-updated')); } catch (e) {}
-    loadOrders();
-    attemptDownloadInvoice(String(order.id));
-    attemptDownloadReceipt(String(order.id));
-  } catch (err: any) { 
-    toast({ title: 'Erreur', description: err.message || String(err), variant: 'destructive' }); 
-  }
-};
 
-  const handleEdit = async (order: Commande) => {
-    try {
-      const res: any = await api.commandes.get(order.id);
-      const body = res.data || res;
-      const cmd = body?.commande || body;
-      const alreadyPaid = Number((cmd as any).montant_paye || 0);
-      if (alreadyPaid > 0) { toast({ title: 'Impossible d\'éditer', description: 'La commande contient déjà un paiement', variant: 'destructive' }); return; }
-      setFormInitial(cmd);
-      setFormOpen(true);
-    } catch (err: any) { toast({ title: 'Erreur', description: err.message || String(err), variant: 'destructive' }); }
-  };
-
-  const handleValidate = async (order: Commande) => {
-    try { await api.commandes.update(order.id, { statut: 'CONFIRMEE' }); toast({ title: 'Commande validée' }); loadOrders(); } catch (err: any) { toast({ title: 'Erreur', description: err.message || String(err), variant: 'destructive' }); }
-  };
-
-  if (loading) return (
-    <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-  );
-
-  return (
-    <div className="p-8 space-y-6 animate-fade-in">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-primary mb-2">Gestion des Commandes</h1>
-          <p className="text-muted-foreground">Recherchez, filtrez et gérez les commandes</p>
-        </div>
-        <Button onClick={() => { setFormInitial(null); setFormOpen(true); }}><Plus className="h-4 w-4 mr-2"/>Nouvelle commande</Button>
-      </div>
-
-      {/* Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Recherche</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Rechercher par numéro, code ou client..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filtres</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-            <div>
-              <label className="text-sm text-muted-foreground">Statut paiement</label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(String(v || 'ALL'))}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Tous" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Tous</SelectItem>
-                  <SelectItem value="PAYEE">Payée</SelectItem>
-                  <SelectItem value="PARTIELLE">Partiellement payée</SelectItem>
-                  <SelectItem value="NON_PAYEE">Non payée</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm text-muted-foreground">Date début</label>
-              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-            </div>
-
-            <div>
-              <label className="text-sm text-muted-foreground">Date fin</label>
-              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={() => { setStatusFilter('ALL'); setDateFrom(''); setDateTo(''); setSearchTerm(''); }}>Effacer</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-6">
-        {['PAYEE','PARTIELLE','NON_PAYEE'].map(section => (
-          grouped[section] && grouped[section].length > 0 ? (
-            <div key={section}>
-              <h2 className="text-lg font-semibold mb-2">{section === 'PAYEE' ? 'Commandes payées' : section === 'PARTIELLE' ? 'Commandes partiellement payées' : 'Commandes non payées'}</h2>
-              <div className="space-y-4">
-                {grouped[section].map(o => (
-                  <Card key={o.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <CardTitle className="text-xl text-primary">{o.code}</CardTitle>
-                          <CardDescription className="flex items-center gap-4 text-sm">
-                            <span>Numéro: {o.numero}</span>
-                            <span>{formatDate((o as any).created_at)}</span>
-                          </CardDescription>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Badge variant={getStatusBadge(section)}>{getStatusLabel(section)}</Badge>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-primary">{(() => { const n = Number(o.total_cmd || 0); return `${n.toFixed(2)} FCFA`; })()}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                          {o.client && <div className="text-sm text-muted-foreground">Client: {o.client.nom} {o.client.prenom}</div>}
-                        </div>
-                        <div className="flex gap-2">
-                          {/* Valider: only when fully paid and EN_ATTENTE */}
-                          {section === 'PAYEE' && o.statut === 'EN_ATTENTE' && (isAdmin || (o.utilisateur && String(o.utilisateur.id) === String(api.auth.getCurrentUser()?.id))) && (
-                            <Button size="sm" variant="outline" onClick={() => handleValidate(o)}><CheckCircle className="h-4 w-4 mr-1"/>Valider</Button>
-                          )}
-
-                          <Button size="sm" variant="outline" onClick={() => handleGenerateInvoice(o.id)} disabled={generatingInvoice === o.id}><FileText className="h-4 w-4 mr-1"/>Facture</Button>
-
-                          <Button size="sm" variant="outline" onClick={() => { setDetailId(String(o.id)); setDetailOpen(true); }}><Eye className="h-4 w-4 mr-1"/>Détails</Button>
-
-                          {/* Edit only when no payment exists */}
-                          {Number((o as any).montant_paye || 0) <= 0 && (
-                            <Button size="sm" variant="outline" onClick={() => handleEdit(o)}><Edit className="h-4 w-4 mr-1"/>Editer</Button>
-                          )}
-
-                          {/* Règlement visible for NON_PAYEE and PARTIELLE */}
-                          {(section === 'NON_PAYEE' || section === 'PARTIELLE') && (
-                            <Button size="sm" variant="outline" onClick={() => handlePay(o)}>Règlement</Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+    return (
+      <Card className={`overflow-hidden hover:shadow-2xl transition-all duration-300 border-l-8 ${config.border} ${config.bg}`}>
+        <CardHeader className="bg-gradient-to-r from-transparent to-muted/30">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <div className="flex items-center gap-4">
+                <h3 className="text-2xl font-bold text-primary flex items-center gap-3">
+                  <Package className="h-6 w-6" />
+                  {order.code || 'CMD-' + order.numero}
+                </h3>
+                <Badge variant={status === 'PAYEE' ? 'default' : status === 'PARTIELLE' ? 'secondary' : 'destructive'} className="text-base px-4 py-1">
+                  {config.label}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {formatDate((order as any).created_at)}</span>
+                <span className="flex items-center gap-2"><User className="h-4 w-4" /> {order.client ? `${order.client.prenom} ${order.client.nom}` : 'Client occasionnel'}</span>
               </div>
             </div>
-          ) : null
-        ))}
-      </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-primary flex items-center justify-end gap-2">
+                <DollarSign className="h-8 w-8" />
+                {total.toLocaleString()} FCFA
+              </div>
+              {status === 'PARTIELLE' && (
+                <div className="text-sm mt-1">
+                  <span className="text-muted-foreground">Payé :</span>{' '}
+                  <span className="font-bold text-orange-600">{paid.toLocaleString()} FCFA</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
 
-      <OrderDetail id={detailId} open={detailOpen} onOpenChange={setDetailOpen} />
-      <OrderForm open={formOpen} onOpenChange={setFormOpen} initial={formInitial} onSaved={() => loadOrders()} />
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap gap-3">
+            <Button size="lg" variant="outline" onClick={() => { setDetailId(String(order.id)); setDetailOpen(true); }}>
+              <Eye className="h-5 w-5 mr-2" /> Détails
+            </Button>
+
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-primary text-primary hover:bg-primary hover:text-white"
+              onClick={async () => {
+                try {
+                  const res: any = await api.commandes.get(order.id);
+                  const cmd = res.data?.commande || res.data || res;
+                  const pRes: any = await apiFetch(`/api/commandes/${order.id}/paiements`).catch(() => ({ data: { paiements: [] } }));
+                  const paiements = pRes.data?.paiements || [];
+
+                  const items = (cmd.items || cmd.produits || []).map((it: any) => ({
+                    nom: it.nom || it.produit_nom || '',
+                    type: it.service_id ? 'Service' : 'Produit',
+                    quantite: Number(it.quantite || 1),
+                    prix_unitaire: Number(it.prix_unitaire || 0),
+                    total: Number(it.total || it.quantite * it.prix_unitaire || 0),
+                  }));
+
+                  setPreviewInvoiceData({ ...cmd, items, paiements });
+                  setPreviewInvoiceId(String(order.id));
+                } catch {
+                  toast({ title: 'Erreur', description: 'Impossible de charger la facture', variant: 'destructive' });
+                }
+              }}
+            >
+              <FileText className="h-5 w-5 mr-2" /> Facture
+            </Button>
+
+            {paid === 0 && (
+              <Button size="lg" variant="outline" onClick={() => handleEdit(order)}>
+                <Edit className="h-5 w-5 mr-2" /> Modifier
+              </Button>
+            )}
+
+            {(status === 'NON_PAYEE' || status === 'PARTIELLE') && (
+              <Button size="lg" onClick={() => handlePay(order)}>
+                <ReceiptText className="h-5 w-5 mr-2" /> Régler
+              </Button>
+            )}
+
+            {status === 'NON_PAYEE' && (
+              <Button size="lg" variant="destructive" onClick={() => handleDeleteOrder(order)}>
+                <Trash2 className="h-5 w-5 mr-2" /> Supprimer
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 md:p-10">
+      <div className="max-w-7xl mx-auto space-y-10">
+
+        {/* Header Premium */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-primary mb-4 flex items-center justify-center gap-4">
+            <Package className="h-12 w-12" />
+            Gestion des Commandes
+          </h1>
+          <p className="text-xl text-muted-foreground">Suivez, modifiez et encaissez vos commandes en toute simplicité</p>
+        </div>
+
+        {/* Onglets stylisés */}
+        <div className="flex flex-wrap justify-center gap-4 mb-10">
+          {(['ALL', 'PAYEE', 'PARTIELLE', 'NON_PAYEE', 'SUPPRIMEES'] as const).map(section => (
+            <Button
+              key={section}
+              variant={activeSection === section ? 'default' : 'outline'}
+              size="lg"
+              onClick={() => setActiveSection(section)}
+              className="text-lg px-8 py-6"
+            >
+              {section === 'ALL' && 'Toutes'}
+              {section === 'PAYEE' && `Payées (${grouped.PAYEE.length})`}
+              {section === 'PARTIELLE' && `Partielles (${grouped.PARTIELLE.length})`}
+              {section === 'NON_PAYEE' && `Non payées (${grouped.NON_PAYEE.length})`}
+              {section === 'SUPPRIMEES' && `Supprimées (${deletedOrders.length})`}
+            </Button>
+          ))}
+        </div>
+
+        {/* Bouton Nouvelle commande */}
+        <div className="flex justify-end mb-8">
+          <Button size="lg" className="text-lg px-8 shadow-xl" onClick={() => { setFormInitial(null); setFormOpen(true); }}>
+            <Plus className="h-6 w-6 mr-3" /> Nouvelle commande
+          </Button>
+        </div>
+
+        {/* Recherche */}
+        <div className="max-w-2xl mx-auto mb-10">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher par code, numéro ou client..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-14 text-lg h-14"
+            />
+          </div>
+        </div>
+
+        {/* Contenu */}
+        <div className="space-y-16">
+          {/* Supprimées */}
+          {activeSection === 'SUPPRIMEES' && (
+            <div className="text-center py-20">
+              {deletedOrders.length === 0 ? (
+                <p className="text-2xl text-muted-foreground">Aucune commande supprimée</p>
+              ) : (
+                <div className="space-y-6">
+                  <h2 className="text-3xl font-bold text-destructive">Corbeille</h2>
+                  {deletedOrders.map(o => (
+                    <Card key={o.id} className="bg-destructive/5 border-destructive/30">
+                      <CardContent className="pt-6 text-center">
+                        <p className="text-xl font-bold text-destructive">{o.code} • {formatDate((o as any).deletedat)}</p>
+                        <p className="text-3xl font-bold mt-4">{Number(o.total_cmd || 0).toLocaleString()} FCFA</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Autres sections */}
+          {(activeSection === 'ALL' || activeSection === 'PAYEE') && grouped.PAYEE.map(o => <OrderCard key={o.id} order={o} status="PAYEE" />)}
+          {(activeSection === 'ALL' || activeSection === 'PARTIELLE') && grouped.PARTIELLE.map(o => <OrderCard key={o.id} order={o} status="PARTIELLE" />)}
+          {(activeSection === 'ALL' || activeSection === 'NON_PAYEE') && grouped.NON_PAYEE.map(o => <OrderCard key={o.id} order={o} status="NON_PAYEE" />)}
+
+          {/* Vide */}
+          {activeSection !== 'SUPPRIMEES' && filteredOrders.length === 0 && (
+            <div className="text-center py-20">
+              <Package className="h-24 w-24 text-muted-foreground mx-auto mb-6 opacity-50" />
+              <p className="text-2xl text-muted-foreground">Aucune commande trouvée</p>
+            </div>
+          )}
+        </div>
+
+        {/* Modals */}
+        <OrderDetail id={detailId} open={detailOpen} onOpenChange={setDetailOpen} />
+        <OrderForm open={formOpen} onOpenChange={setFormOpen} initial={formInitial} onSaved={loadOrders} />
+        <InvoicePreviewModal
+          orderId={previewInvoiceId}
+          orderData={previewInvoiceData}
+          payments={previewInvoiceData?.paiements || []}
+          open={!!previewInvoiceId}
+          onClose={() => { setPreviewInvoiceId(null); setPreviewInvoiceData(null); }}
+        />
+      </div>
     </div>
   );
 };

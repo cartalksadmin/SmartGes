@@ -143,7 +143,7 @@ const Clients = () => {
         </div>
         {isAdmin && (
           <div className="flex items-center gap-3">
-            <Button className="bg-gradient-primary hover:opacity-90" onClick={openCreateForm}>
+            <Button className="" onClick={openCreateForm}>
               <Plus className="h-4 w-4 mr-2" />
               Nouveau client
             </Button>

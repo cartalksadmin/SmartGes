@@ -1,5 +1,6 @@
 // Default API base: prefer VITE_API_BASE_URL (set in Vercel). If missing, default to Render backend.
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://backendsaas-htlv.onrender.com' || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+// Prefer explicit environment override; fallback to your deployed backend, then current origin
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://backendsaas-htlv.onrender.com' || (typeof window !== 'undefined' ? window.location.origin : 'https://backendsaas-htlv.onrender.com');
 
 export interface ApiResponse<T = any> {
   data?: T;
@@ -53,9 +54,9 @@ export async function apiFetch<T = any>(
     body = {};
   }
 
+
   // Handle 401 - unauthorized
   if (res.status === 401) {
-    // Clear tokens and redirect to login
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
@@ -63,30 +64,34 @@ export async function apiFetch<T = any>(
     throw new Error('Session expirée. Veuillez vous reconnecter.');
   }
 
+  // Handle explicit token error from backend
   if (!res.ok) {
     const raw = body;
-    // Normalize error message to a string so Error.message isn't "[object Object]"
     let errorMessage: string;
     if (body == null) {
       errorMessage = `Erreur HTTP ${res.status}`;
     } else if (typeof body === 'string') {
       errorMessage = body;
     } else if (typeof body === 'object') {
-      // Prefer common fields
       errorMessage = String(body.error || body.message || JSON.stringify(body));
     } else {
       errorMessage = String(body);
     }
 
-    try {
-      // Broadcast a global alert event with both a readable message and raw payload
-      const ev = new CustomEvent('global-alert', { detail: { level: 'error', message: errorMessage, raw } });
-      window.dispatchEvent(ev);
-    } catch (e) {
-      // ignore in non-browser environments
+    // Déconnexion si le message d'erreur contient "Token invalide"
+    if (errorMessage && errorMessage.toLowerCase().includes('token invalide')) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      throw new Error('Session expirée. Veuillez vous reconnecter.');
     }
 
-    // Throw an Error whose message is a string (not an object)
+    try {
+      const ev = new CustomEvent('global-alert', { detail: { level: 'error', message: errorMessage, raw } });
+      window.dispatchEvent(ev);
+    } catch (e) {}
+
     throw new Error(errorMessage);
   }
 
@@ -264,6 +269,8 @@ export const api = {
     delete: (id: string) => apiFetch<ApiResponse>(`/api/users/${id}`, {
       method: 'DELETE',
     }),
+    // Admin: stats about users / employees
+    stats: () => apiFetch<ApiResponse>('/api/users/stats'),
   },
 
   // Tasks
@@ -308,4 +315,48 @@ export const api = {
     },
     create: (data: any) => apiFetch<ApiResponse>('/api/inventaire', { method: 'POST', body: JSON.stringify(data) }),
   },
-};
+
+  attemptDownloadInvoice: async (orderId: string) => {
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const base = `${API_BASE || ''}/api/commandes/${orderId}/invoice/download`;
+    const inlineUrl = `${base}?inline=true`;
+    const token = localStorage.getItem('accessToken') || '';
+    const headers: Record<string,string> = { 'Accept': 'application/pdf' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    for (let i = 0; i < 6; i++) {
+      try {
+        const r = await fetch(base, { method: 'HEAD', headers });
+        if (r.ok) {
+          try { window.open(inlineUrl, '_blank'); } catch (e) {}
+          try {
+            const blobResp = await fetch(base, { headers });
+            if (blobResp.ok) {
+              const blob = await blobResp.blob();
+              const urlBlob = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = urlBlob;
+              const disp = blobResp.headers.get('content-disposition');
+              let filename = `facture-${orderId}.pdf`;
+              if (disp) {
+                const m = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/.exec(disp);
+                if (m) {
+                  filename = decodeURIComponent(m[1] || m[2] || filename);
+                }
+              }
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              window.URL.revokeObjectURL(urlBlob);
+              return;
+            }
+          } catch (e) {}
+          return;
+        }
+      } catch (e) {}
+      await new Promise(r => setTimeout(r, 300 * (i + 1)));
+    }
+    try { window.open(inlineUrl, '_blank'); } catch {}
+  }
+}

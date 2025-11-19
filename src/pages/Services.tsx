@@ -163,7 +163,7 @@ const Services = () => {
             if (!open) resetForm();
           }}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-primary hover:opacity-90">
+              <Button >
                 <Plus className="h-4 w-4 mr-2" />
                 Nouveau service
               </Button>

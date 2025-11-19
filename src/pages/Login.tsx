@@ -60,7 +60,8 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#0A1A2F] flex items-center justify-center p-4">
+
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
         
         {/* Left Side - Branding */}
@@ -157,7 +158,7 @@ const Login = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-12 bg-gradient-primary hover:opacity-90 transition-all"
+                  className="w-full h-12 transition-all"
                   disabled={isLoading}
                 >
                   {isLoading ? "Connexion..." : "Se connecter"}
