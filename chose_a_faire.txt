@@ -1,0 +1,15 @@
+1 Permetre la création de du client manuelement dans son interfacte de commande ( dans le modal de commande) et il serat directement creer dans la table client ( nom, prenom ,telephone et mail( non obliogatories))
+
+2 Le modal de creation de commande est trop large pour rester sur la page ( les produits et les services)
+
+3 La page des produits n'affiche pas tous les produits (je veux la liste de tous les produits avec plien de filtre).
+
+4 La facture doit etre du format de l'entreprise avec les bons logos et le cachet de l'entreprise ainsi que la bonne numérotation
+
+5 Le réçus de paiement doit etre generer après chaque paiements.
+
+6 Gerer le module ventes pour qu'il enregistre tous les paiement effectuer
+
+7 Mettre en place une système permettant de supprimer les commande ( si aucun paiements déssus ) 
+
+8 Remettre à jour le dashboard admin pour afficher aussi les employer et leurs travil ( savoir qui a fait quoi, qui travaille le plus ou le moins et autres ) 
